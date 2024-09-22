@@ -4,7 +4,8 @@ metadata:
   name: mysql
 spec:
   selector:
-    app: mysql
+    app: mysql  # Must match the label in your MySQL deployment
   ports:
     - port: 3306
       targetPort: 3306
+

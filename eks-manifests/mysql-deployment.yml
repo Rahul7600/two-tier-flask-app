@@ -2,8 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mysql
-  labels:
-    app: mysql
 spec:
   replicas: 1
   selector:
@@ -16,7 +14,7 @@ spec:
     spec:
       containers:
         - name: mysql
-          image: mysql:latest
+          image: mysql:5.7
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
@@ -24,17 +22,17 @@ spec:
                   name: mysql-secret
                   key: MYSQL_ROOT_PASSWORD
             - name: MYSQL_DATABASE
-              value: "mydb"
+              value: devops
             - name: MYSQL_USER
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_USER
             - name: MYSQL_PASSWORD
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_PASSWORD
           ports:
             - containerPort: 3306
-          volumeMounts:
-            - name: mysql-initdb
-              mountPath: docker-entrypoint-initdb.d
-      volumes:
-        - name: mysql-initdb
-          configMap:
-            name: mysql-initdb-config    # Config name
+
