@@ -5,10 +5,15 @@ metadata:
   labels:
     app: two-tier-app
 spec:
-  replicas: 1
+  replicas: 3  # Set to 3 replicas for load balancing and availability
   selector:
     matchLabels:
       app: two-tier-app
+  strategy:
+    type: RollingUpdate  # Use rolling update strategy
+    rollingUpdate:
+      maxSurge: 1  # Allow one extra pod during update
+      maxUnavailable: 1  # Allow one pod to be unavailable during update
   template:
     metadata:
       labels:
@@ -19,7 +24,7 @@ spec:
           image: rahul7600/flaskapp:latest
           env:
             - name: MYSQL_HOST
-              value: mysql          # this is your mysql's service clusture IP, Make sure to change it with yours
+              value: mysql  # Use the MySQL service name
             - name: MYSQL_PASSWORD
               value: "admin"
             - name: MYSQL_USER
@@ -29,3 +34,4 @@ spec:
           ports:
             - containerPort: 5000
           imagePullPolicy: Always
+
