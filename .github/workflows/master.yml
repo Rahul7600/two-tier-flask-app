@@ -1,37 +1,66 @@
-name: Docker Build and Push
+name: Docker Build and Push with AIOps
 
 on:
   push:
     branches:
-      - master  # Trigger on pushes to the 'master' branch
+      - master
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout the code from GitHub
+    # Step 1: Checkout the code
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Step 2: Log in to Docker Hub using GitHub Secrets
+    # Step 2: Log in to Docker Hub
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # Step 3: Build the Docker image
+    # Step 3: Build Docker image
     - name: Build Docker image
       run: |
         docker build . -t flaskapp
 
-    # Step 4: Tag the image with your Docker Hub username
+    # Step 4: Tag Docker image
     - name: Tag Docker image
       run: |
         docker tag flaskapp rahul7600/flaskapp:v1
 
-    # Step 5: Push the Docker image to Docker Hub
+    # Step 5: Push Docker image
     - name: Push Docker image
       run: |
         docker push rahul7600/flaskapp:v1
+
+    # ==================================================
+    # 🤖 AIOps: AI Failure Analysis (SAFE)
+    # ==================================================
+    - name: 🤖 AI Analyze Pipeline Failure
+      if: failure()
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        echo "🤖 AI is analyzing GitHub Actions failure..."
+
+        LOGS=$(tail -n 200 $GITHUB_WORKSPACE/.github/workflows/* 2>/dev/null || echo "Logs not found")
+
+        curl -s https://api.openai.com/v1/chat/completions \
+          -H "Authorization: Bearer $OPENAI_API_KEY" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"model\": \"gpt-4.1-mini\",
+            \"messages\": [
+              {
+                \"role\": \"system\",
+                \"content\": \"You are a senior DevOps engineer.\"
+              },
+              {
+                \"role\": \"user\",
+                \"content\": \"Analyze this Docker build/push CI failure and suggest root cause and fix:\\n$LOGS\"
+              }
+            ]
+          }"
