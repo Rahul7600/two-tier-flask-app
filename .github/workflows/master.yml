@@ -10,24 +10,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # --------------------------------------------------
+    # ----------------------------------------
     # Step 1: Checkout code
-    # --------------------------------------------------
+    # ----------------------------------------
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # --------------------------------------------------
-    # Step 2: Login to Docker Hub
-    # --------------------------------------------------
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+    # ----------------------------------------
+    # Step 2: Docker Login (capture logs)
+    # ----------------------------------------
+    - name: Docker Login (capture logs)
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        set +e
+        echo "Attempting Docker login..."
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin 2>&1 | tee docker-login.log
+        LOGIN_EXIT_CODE=${PIPESTATUS[0]}
+        exit $LOGIN_EXIT_CODE
 
-    # --------------------------------------------------
-    # Step 3: Build Docker image (LOGS ALWAYS CAPTURED)
-    # --------------------------------------------------
+    # ----------------------------------------
+    # Step 3: Build Docker image (capture logs)
+    # ----------------------------------------
     - name: Build Docker image
       run: |
         set +e
@@ -35,16 +40,16 @@ jobs:
         BUILD_EXIT_CODE=${PIPESTATUS[0]}
         exit $BUILD_EXIT_CODE
 
-    # --------------------------------------------------
+    # ----------------------------------------
     # Step 4: Tag Docker image
-    # --------------------------------------------------
+    # ----------------------------------------
     - name: Tag Docker image
       run: |
         docker tag flaskapp rahul7600/flaskapp:v1
 
-    # --------------------------------------------------
-    # Step 5: Push Docker image (LOGS ALWAYS CAPTURED)
-    # --------------------------------------------------
+    # ----------------------------------------
+    # Step 5: Push Docker image (capture logs)
+    # ----------------------------------------
     - name: Push Docker image
       run: |
         set +e
@@ -52,21 +57,22 @@ jobs:
         PUSH_EXIT_CODE=${PIPESTATUS[0]}
         exit $PUSH_EXIT_CODE
 
-    # --------------------------------------------------
-    # (Optional) Upload logs as artifact (recommended)
-    # --------------------------------------------------
+    # ----------------------------------------
+    # (Optional) Upload logs as artifact
+    # ----------------------------------------
     - name: Upload Docker logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: docker-logs
         path: |
+          docker-login.log
           docker-build.log
           docker-push.log
 
-    # ==================================================
-    # 🤖 AIOps: AI Failure Analysis (REAL LOGS)
-    # ==================================================
+    # ========================================
+    # 🤖 AIOps: AI Failure Analysis (ALL LOGS)
+    # ========================================
     - name: 🤖 AI Analyze Pipeline Failure
       if: failure()
       continue-on-error: true
@@ -75,21 +81,15 @@ jobs:
       run: |
         echo "🤖 AI is analyzing GitHub Actions failure..."
 
-        LOGS=$(cat docker-build.log docker-push.log 2>/dev/null || echo "No Docker logs found")
+        LOGS=$(cat docker-login.log docker-build.log docker-push.log 2>/dev/null || echo "No Docker logs found")
 
         JSON_PAYLOAD=$(jq -n \
           --arg logs "$LOGS" \
           '{
             model: "gpt-4.1-mini",
             messages: [
-              {
-                role: "system",
-                content: "You are a senior DevOps engineer."
-              },
-              {
-                role: "user",
-                content: ("Analyze this GitHub Actions Docker CI failure and give the EXACT root cause and fix:\n" + $logs)
-              }
+              { role: "system", content: "You are a senior DevOps engineer." },
+              { role: "user", content: ("Analyze this Docker CI failure (login/build/push) and give EXACT root cause and fix:\n" + $logs) }
             ]
           }')
 
