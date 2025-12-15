@@ -33,7 +33,7 @@ jobs:
     - name: Push Docker image
       run: |
         set +e
-        docker push rahulray760/flaskapp:v1 2>&1 | tee docker-push.log
+        docker push rahulray761/flaskapp:v1 2>&1 | tee docker-push.log
         PUSH_EXIT_CODE=${PIPESTATUS[0]}
         exit $PUSH_EXIT_CODE
 
